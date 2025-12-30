@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Satisfaction Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% load custom_filters %}
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            color: white !important;
+            font-weight: 600;
+        }
+        .prediction-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: white;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .form-control[type="range"] {
+            padding: 0;
+            height: 8px;
+        }
+        h5 {
+            color: #333;
+            font-weight: 700;
+        }
+        .badge {
+            font-size: 0.85rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .result-card {
+            margin-top: 2rem;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .prediction-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'dashboard:home' %}">
+                <i class="bi bi-house-door"></i> Home
+            </a>
+            <span class="navbar-text text-white">
+                <i class="bi bi-emoji-smile"></i> Customer Satisfaction Prediction
+            </span>
+        </div>
+    </nav>
+
+    <div class="container prediction-container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h3 class="mb-0"><i class="bi bi-emoji-smile"></i> Customer Satisfaction Forecast</h3>
+            </div>
+            <div class="card-body">
+                {% if not model_loaded %}
+                    <div class="alert alert-warning" role="alert">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Model Not Loaded</h5>
+                        <p>Please ensure your trained satisfaction model file is placed in:</p>
+                        <ul>
+                            <li><code>satisfaction_model.joblib</code> in the static folder</li>
+                        </ul>
+                        <p class="mb-0">Or set the <code>SATISFACTION_MODEL_PATH</code> in the views</p>
+                    </div>
+                {% endif %}
+
+                <form id="predictionForm" method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-person-circle"></i> Basic Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.gender.id_for_label }}" class="form-label">{{ form.gender.label }}</label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}<div class="text-danger small mt-1">{{ form.gender.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.age.id_for_label }}" class="form-label">{{ form.age.label }}</label>
+                                {{ form.age }}
+                                {% if form.age.errors %}<div class="text-danger small mt-1">{{ form.age.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.customer_type.id_for_label }}" class="form-label">{{ form.customer_type.label }}</label>
+                                {{ form.customer_type }}
+                                {% if form.customer_type.errors %}<div class="text-danger small mt-1">{{ form.customer_type.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.type_of_travel.id_for_label }}" class="form-label">{{ form.type_of_travel.label }}</label>
+                                {{ form.type_of_travel }}
+                                {% if form.type_of_travel.errors %}<div class="text-danger small mt-1">{{ form.type_of_travel.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Flight Information Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-airplane-engines"></i> Flight Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.flight_class.id_for_label }}" class="form-label">{{ form.flight_class.label }}</label>
+                                {{ form.flight_class }}
+                                {% if form.flight_class.errors %}<div class="text-danger small mt-1">{{ form.flight_class.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.flight_distance.id_for_label }}" class="form-label">{{ form.flight_distance.label }}</label>
+                                {{ form.flight_distance }}
+                                {% if form.flight_distance.errors %}<div class="text-danger small mt-1">{{ form.flight_distance.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service Ratings Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-star-fill"></i> Service Ratings (0-5)</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.seat_comfort.id_for_label }}" class="form-label">{{ form.seat_comfort.label }}
+                                    <span class="badge bg-primary ms-2" id="seat_comfort_value">3</span>
+                                </label>
+                                {{ form.seat_comfort }}
+                                {% if form.seat_comfort.errors %}<div class="text-danger small mt-1">{{ form.seat_comfort.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.departure_arrival_time.id_for_label }}" class="form-label">{{ form.departure_arrival_time.label }}
+                                    <span class="badge bg-primary ms-2" id="departure_arrival_time_value">3</span>
+                                </label>
+                                {{ form.departure_arrival_time }}
+                                {% if form.departure_arrival_time.errors %}<div class="text-danger small mt-1">{{ form.departure_arrival_time.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.food_and_drink.id_for_label }}" class="form-label">{{ form.food_and_drink.label }}
+                                    <span class="badge bg-primary ms-2" id="food_and_drink_value">3</span>
+                                </label>
+                                {{ form.food_and_drink }}
+                                {% if form.food_and_drink.errors %}<div class="text-danger small mt-1">{{ form.food_and_drink.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.gate_location.id_for_label }}" class="form-label">{{ form.gate_location.label }}
+                                    <span class="badge bg-primary ms-2" id="gate_location_value">3</span>
+                                </label>
+                                {{ form.gate_location }}
+                                {% if form.gate_location.errors %}<div class="text-danger small mt-1">{{ form.gate_location.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.inflight_wifi.id_for_label }}" class="form-label">{{ form.inflight_wifi.label }}
+                                    <span class="badge bg-primary ms-2" id="inflight_wifi_value">3</span>
+                                </label>
+                                {{ form.inflight_wifi }}
+                                {% if form.inflight_wifi.errors %}<div class="text-danger small mt-1">{{ form.inflight_wifi.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.inflight_entertainment.id_for_label }}" class="form-label">{{ form.inflight_entertainment.label }}
+                                    <span class="badge bg-primary ms-2" id="inflight_entertainment_value">3</span>
+                                </label>
+                                {{ form.inflight_entertainment }}
+                                {% if form.inflight_entertainment.errors %}<div class="text-danger small mt-1">{{ form.inflight_entertainment.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.online_support.id_for_label }}" class="form-label">{{ form.online_support.label }}
+                                    <span class="badge bg-primary ms-2" id="online_support_value">3</span>
+                                </label>
+                                {{ form.online_support }}
+                                {% if form.online_support.errors %}<div class="text-danger small mt-1">{{ form.online_support.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.ease_of_online_booking.id_for_label }}" class="form-label">{{ form.ease_of_online_booking.label }}
+                                    <span class="badge bg-primary ms-2" id="ease_of_online_booking_value">3</span>
+                                </label>
+                                {{ form.ease_of_online_booking }}
+                                {% if form.ease_of_online_booking.errors %}<div class="text-danger small mt-1">{{ form.ease_of_online_booking.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.on_board_service.id_for_label }}" class="form-label">{{ form.on_board_service.label }}
+                                    <span class="badge bg-primary ms-2" id="on_board_service_value">3</span>
+                                </label>
+                                {{ form.on_board_service }}
+                                {% if form.on_board_service.errors %}<div class="text-danger small mt-1">{{ form.on_board_service.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.leg_room_service.id_for_label }}" class="form-label">{{ form.leg_room_service.label }}
+                                    <span class="badge bg-primary ms-2" id="leg_room_service_value">3</span>
+                                </label>
+                                {{ form.leg_room_service }}
+                                {% if form.leg_room_service.errors %}<div class="text-danger small mt-1">{{ form.leg_room_service.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.baggage_handling.id_for_label }}" class="form-label">{{ form.baggage_handling.label }}
+                                    <span class="badge bg-primary ms-2" id="baggage_handling_value">3</span>
+                                </label>
+                                {{ form.baggage_handling }}
+                                {% if form.baggage_handling.errors %}<div class="text-danger small mt-1">{{ form.baggage_handling.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.checkin_service.id_for_label }}" class="form-label">{{ form.checkin_service.label }}
+                                    <span class="badge bg-primary ms-2" id="checkin_service_value">3</span>
+                                </label>
+                                {{ form.checkin_service }}
+                                {% if form.checkin_service.errors %}<div class="text-danger small mt-1">{{ form.checkin_service.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.cleanliness.id_for_label }}" class="form-label">{{ form.cleanliness.label }}
+                                    <span class="badge bg-primary ms-2" id="cleanliness_value">3</span>
+                                </label>
+                                {{ form.cleanliness }}
+                                {% if form.cleanliness.errors %}<div class="text-danger small mt-1">{{ form.cleanliness.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.online_boarding.id_for_label }}" class="form-label">{{ form.online_boarding.label }}
+                                    <span class="badge bg-primary ms-2" id="online_boarding_value">3</span>
+                                </label>
+                                {{ form.online_boarding }}
+                                {% if form.online_boarding.errors %}<div class="text-danger small mt-1">{{ form.online_boarding.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delay Information Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-hourglass-split"></i> Flight Delays</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.departure_delay.id_for_label }}" class="form-label">{{ form.departure_delay.label }}</label>
+                                {{ form.departure_delay }}
+                                {% if form.departure_delay.errors %}<div class="text-danger small mt-1">{{ form.departure_delay.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.arrival_delay.id_for_label }}" class="form-label">{{ form.arrival_delay.label }}</label>
+                                {{ form.arrival_delay }}
+                                {% if form.arrival_delay.errors %}<div class="text-danger small mt-1">{{ form.arrival_delay.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" {% if not model_loaded %}disabled{% endif %}>
+                            <i class="bi bi-calculator"></i> Predict Satisfaction
+                        </button>
+                    </div>
+                </form>
+
+                {% if prediction %}
+                    <div class="card result-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-center"><i class="bi bi-check-circle-fill text-success"></i> Prediction Result</h5>
+                            
+                            <!-- Predicted Class -->
+                            <div class="text-center mb-4">
+                                <p class="mb-2">Customer Satisfaction Status:</p>
+                                <div class="prediction-value" style="font-size: 2rem; {% if prediction.predicted_class == 1 %}color: #28a745;{% else %}color: #dc3545;{% endif %}">
+                                    {% if prediction.predicted_class == 1 %}
+                                        <i class="bi bi-check-circle-fill"></i> Satisfied
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill"></i> Not Satisfied
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Confidence Scores -->
+                            {% if prediction.probabilities %}
+                                <div class="mb-4">
+                                    <h6 class="text-center mb-3">Confidence Scores</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Satisfaction Level</th>
+                                                    <th>Confidence</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for class_name, prob in prediction.probabilities.items %}
+                                                    <tr>
+                                                        <td>{{ class_name }}</td>
+                                                        <td>{{ prob|floatformat:2 }} ({{ prob|multiply:100|floatformat:1 }}%)</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if error %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        <i class="bi bi-exclamation-circle"></i> <strong>Error:</strong> {{ error }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Update range slider values in real time
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            // Get the field name without the 'id_' prefix that Django adds
+            const fieldName = input.id.replace('id_', '');
+            const valueSpan = document.getElementById(fieldName + '_value');
+            
+            // Update on input event for real-time feedback
+            input.addEventListener('input', function() {
+                if (valueSpan) {
+                    valueSpan.textContent = this.value;
+                }
+            });
+            
+            // Set initial value
+            if (valueSpan) {
+                valueSpan.textContent = input.value;
+            }
+        });
+
+        // Form validation
+        document.getElementById('predictionForm')?.addEventListener('submit', function(e) {
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            this.classList.add('was-validated');
+        });
+    </script>
+</body>
+</html>
