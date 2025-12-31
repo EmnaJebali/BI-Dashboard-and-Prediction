@@ -1,15 +1,22 @@
-# ML & BI Dashboard Application
+# Airline Fidelity Program Analysis Dashboard
 
-A Django web application that provides:
-1. **Power BI Dashboard Embedding** - Visualize your published Power BI dashboards
-2. **ML Prediction Service** - Make predictions using your trained machine learning model
+A Django web application for analyzing airline customer fidelity and satisfaction through machine learning and business intelligence. This application provides:
+
+1. **Power BI Dashboard Embedding** - Visualize airline performance metrics and trends through interactive Power BI dashboards
+2. **ML Prediction Models** - Make predictions using trained machine learning models for:
+   - Flight Volume Forecasting
+   - Customer Satisfaction Prediction
+   - Revenue Forecasting
 
 ## Features
 
 - 🎨 Modern, responsive UI with Bootstrap 5
 - 📊 Embedded Power BI dashboard visualization
-- 🤖 ML model prediction form with API endpoint
-- 🔧 Easy configuration for Power BI URL and model path
+- 🤖 Multiple ML model prediction services
+- 🎯 Sidebar navigation with organized model selection
+- 📱 Mobile-responsive design
+- ⚡ Fast and efficient prediction API endpoints
+- 🔧 Easy configuration for Power BI URL and model paths
 
 ## Setup Instructions
 
@@ -43,33 +50,34 @@ POWERBI_EMBED_URL = 'https://app.powerbi.com/view?r=YOUR_EMBED_URL'
 2. Click "File" → "Embed report" → "Website or portal"
 3. Copy the embed URL
 
-### 3. Add Your ML Model
+### 3. Add Your ML Models
 
-Place your trained model file in one of these locations:
-- `model.pkl` or `model.joblib` in the project root
-- `models/model.pkl` or `models/model.joblib`
-
-Or set the path in `airline/settings.py`:
-```python
-MODEL_PATH = '/path/to/your/model.pkl'
-```
+Place your trained model files in the `static/` directory:
+- `FlightsPrediction.pkl` - Prophet model for flight volume forecasting
+- `satisfaction_model.joblib` - Satisfaction prediction model
+- Additional models can be added and referenced in `predict/views.py`
 
 **Supported model formats:**
 - `.pkl` (pickle)
 - `.joblib` (joblib)
 
 **Model requirements:**
-- The model should have a `.predict()` method
-- If using scikit-learn, the model should have `feature_names_in_` attribute for automatic feature mapping
-- For other frameworks, you may need to customize the `make_prediction()` function in `dashboard/views.py`
+- Flight model: Prophet forecasting model with `.make_future_dataframe()` and `.predict()` methods
+- Satisfaction model: Scikit-learn compatible model with `.predict_proba()` method
+- Custom models can be added by extending the prediction views
 
-### 4. Customize Prediction Form
+### 4. Customize Prediction Forms
 
-Edit `dashboard/forms.py` and `templates/dashboard/prediction_form.html` to match your model's input features:
+Edit the relevant form and view files to match your model's input features:
 
-1. Update the form fields in `dashboard/forms.py` to match your model's expected inputs
-2. Update the HTML form in `templates/dashboard/prediction_form.html` with the same fields
-3. If needed, modify the `make_prediction()` function in `dashboard/views.py` to handle your specific model format
+**For Flight Predictions:**
+- `predict/views.py` - `prediction_form()` function
+- `templates/prediction_form.html` - Flight prediction form
+
+**For Satisfaction Predictions:**
+- `predict/forms.py` - `SatisfactionForm` class
+- `predict/views.py` - `satisfaction_prediction()` function
+- `templates/satisfaction_form.html` - Satisfaction form
 
 ### 5. Run Migrations
 
@@ -87,111 +95,156 @@ Visit `http://127.0.0.1:8000/` to see the application.
 
 ## Usage
 
+### Navigation
+
+The application features a persistent sidebar with organized navigation:
+- **Airline Fidelity** - Branding and home link
+- **Dashboard Section** - Power BI Dashboard link
+- **Predict Section** - Dropdown list of all available prediction models
+
 ### Home Page
-Navigate to the home page to access:
-- Power BI Dashboard
-- ML Prediction Form
+The landing page provides quick access to:
+- Power BI Dashboard - View comprehensive business intelligence dashboards
+- ML Prediction - Access machine learning prediction models
 
 ### Power BI Dashboard
-View your embedded Power BI dashboard with interactive visualizations.
+View your embedded Power BI dashboard with:
+- Interactive visualizations
+- Real-time data updates
+- Drill-down capabilities
+- Export and sharing features
 
-### ML Prediction
-1. Fill out the prediction form with your input features
-2. Click "Predict" to get predictions from your trained model
-3. View the prediction result and probabilities (if available)
+### ML Predictions
 
-### API Endpoint
-You can also make predictions via API:
+#### Flight Volume Forecast
+1. Navigate to Predict → Models → Flights Forecast
+2. Enter the number of months to forecast (1-24)
+3. Click "Predict" to generate forecasts
+4. View the predicted flight volumes in the results table
 
-```bash
-POST /api/predict/
-Content-Type: application/json
+#### Customer Satisfaction Prediction
+1. Navigate to Predict → Models → Satisfaction
+2. Fill out the comprehensive form with:
+   - Basic information (gender, age, customer type, travel type)
+   - Flight information (class, distance)
+   - Service ratings (14 different rating scales)
+   - Flight delay information
+3. Click "Predict Satisfaction"
+4. View satisfaction prediction with confidence scores
 
-{
-    "feature1": 1.5,
-    "feature2": 2.3
-}
-```
-
-Response:
-```json
-{
-    "success": true,
-    "prediction": {
-        "value": 0.85,
-        "probabilities": [0.15, 0.85]
-    }
-}
-```
+#### Revenue Forecast
+1. Navigate to Predict → Models → Revenue
+2. Enter historical revenue data
+3. Click "Predict" to generate revenue forecasts
+4. View trends and projections
 
 ## Project Structure
 
 ```
 ML_BI/
-├── airline/              # Django project settings
-│   ├── settings.py       # Configuration (Power BI URL, Model Path)
-│   └── urls.py           # Main URL routing
-├── dashboard/            # Main application
-│   ├── views.py          # Views for dashboard and predictions
-│   ├── forms.py          # Prediction form (customize for your model)
-│   └── urls.py           # App URL routing
-├── templates/            # HTML templates
-│   └── dashboard/
-│       ├── home.html
-│       ├── powerbi_dashboard.html
-│       └── prediction_form.html
-├── static/               # Static files (CSS, JS, images)
-├── model.pkl            # Your trained model (place here)
-└── requirements.txt     # Python dependencies
+├── airline/                    # Django project settings
+│   ├── settings.py             # Configuration
+│   ├── urls.py                 # Main URL routing
+│   └── wsgi.py
+├── dashboard/                  # Dashboard app
+│   ├── views.py                # Dashboard and Power BI views
+│   ├── urls.py                 # Dashboard URL routing
+│   └── migrations/
+├── predict/                    # Prediction app
+│   ├── views.py                # Prediction views and API
+│   ├── forms.py                # Prediction forms
+│   ├── urls.py                 # Prediction URL routing
+│   └── migrations/
+├── templates/                  # HTML templates
+│   ├── base.html               # Base template with sidebar
+│   ├── home.html               # Home page
+│   ├── powerbi_dashboard.html  # Power BI embedding
+│   ├── prediction_selector.html # Model selection page
+│   ├── prediction_form.html    # Flight forecast form
+│   └── satisfaction_form.html  # Satisfaction prediction form
+├── static/                     # Static files
+│   ├── FlightsPrediction.pkl   # Flight forecasting model
+│   ├── satisfaction_model.joblib
+│   └── train_prophet.ipynb
+├── db.sqlite3                  # SQLite database
+├── manage.py                   # Django management script
+└── requirements.txt            # Python dependencies
 ```
 
 ## Customization
 
-### Adding More Form Fields
+### Adding a New Prediction Model
 
-1. Edit `dashboard/forms.py`:
+1. **Create a new view in `predict/views.py`:**
 ```python
-feature3 = forms.FloatField(
-    label='Feature 3',
-    required=True,
-    widget=forms.NumberInput(attrs={'class': 'form-control'})
-)
+def new_model_prediction(request):
+    """New prediction view"""
+    prediction = None
+    error = None
+    
+    if request.method == "POST":
+        try:
+            # Load model and make prediction
+            model = joblib.load(MODEL_PATH)
+            prediction = model.predict(...)
+        except Exception as e:
+            error = str(e)
+    
+    return render(request, 'new_model_form.html', {
+        'prediction': prediction,
+        'error': error
+    })
 ```
 
-2. Edit `templates/dashboard/prediction_form.html`:
-```html
-<div class="mb-3">
-    <label for="feature3" class="form-label">Feature 3</label>
-    <input type="number" class="form-control" id="feature3" name="feature3" required>
-</div>
+2. **Add URL routing in `predict/urls.py`:**
+```python
+path('new-model/', views.new_model_prediction, name='new_model_prediction'),
 ```
 
-### Custom Model Prediction Logic
+3. **Create form template in `templates/new_model_form.html`**
 
-If your model has special requirements, modify the `make_prediction()` function in `dashboard/views.py` to handle:
-- Feature preprocessing
-- Different model frameworks (TensorFlow, PyTorch, etc.)
-- Custom prediction formats
+4. **Update sidebar in `templates/base.html`** to add link to new model
+
+### Customizing the Sidebar
+
+Edit the sidebar section in `templates/base.html` to:
+- Add new prediction models to the dropdown
+- Modify dashboard links
+- Change branding text
 
 ## Troubleshooting
 
 **Power BI dashboard not showing:**
-- Verify the embed URL is correct
+- Verify the embed URL is correct and not expired
 - Check that the Power BI report is published and accessible
-- Ensure the URL doesn't contain `YOUR_EMBED_URL_HERE`
+- Ensure you have proper authentication
+- Try the "Open in New Tab" button to debug
 
-**Model not loading:**
-- Check the model file path
-- Verify the model file format (.pkl or .joblib)
-- Ensure required libraries (joblib, pickle) are installed
+**Models not loading:**
+- Check that model files exist in `static/` directory
+- Verify file paths in `predict/views.py`
+- Ensure model file format (.pkl or .joblib) is correct
 - Check console for error messages
 
 **Prediction errors:**
-- Verify form fields match model's expected features
-- Check feature names and types match training data
-- Review the `make_prediction()` function for compatibility
+- Verify form input values are in expected ranges
+- Check that model input features match form fields
+- Review error messages in the UI and console
+- Ensure required Python libraries are installed
+
+**Sidebar navigation issues:**
+- Clear browser cache and refresh
+- Check browser console for JavaScript errors (F12)
+- Ensure Bootstrap 5 CDN is loading correctly
 
 ## License
 
 This project is open source and available for use.
+
+## Support
+
+For issues or questions, please check:
+- Browser console (F12) for client-side errors
+- Django terminal output for server-side errors
+- Power BI admin portal for dashboard access issues
 
