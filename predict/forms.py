@@ -148,3 +148,16 @@ class SatisfactionForm(forms.Form):
         label="Arrival Delay (minutes)",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0'})
     )
+
+
+class ClusteringPartnersForm(forms.Form):
+    total_issued_points = forms.IntegerField(
+        min_value=0,
+        label="Total Issued Points",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter total loyalty points issued'})
+    )
+    total_cost = forms.IntegerField(
+        min_value=0,
+        label="Total Cost",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter total cost of issued points'})
+    )

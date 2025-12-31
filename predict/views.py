@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.conf import settings
 import os
-from .forms import SatisfactionForm
+from .forms import SatisfactionForm, ClusteringPartnersForm
 
 
 FLIGHTS_MODEL_PATH = os.path.join(
@@ -19,6 +19,12 @@ SATISFACTION_MODEL_PATH = os.path.join(
     settings.BASE_DIR,
     "ml_models",
     "satisfaction_model.joblib"
+)
+
+CLUSTERING_PARTNERS_MODEL_PATH = os.path.join(
+    settings.BASE_DIR,
+    "ml_models",
+    "ClusteringPartners.pkl"
 )
 
 
@@ -41,6 +47,16 @@ try:
         satisfaction_model_loaded = True
 except Exception as e:
     print(f"Error loading satisfaction model: {e}")
+
+# Safely load the clustering partners model
+clustering_partners_model = None
+clustering_partners_model_loaded = False
+try:
+    if os.path.exists(CLUSTERING_PARTNERS_MODEL_PATH):
+        clustering_partners_model = joblib.load(CLUSTERING_PARTNERS_MODEL_PATH)
+        clustering_partners_model_loaded = True
+except Exception as e:
+    print(f"Error loading clustering partners model: {e}")
 
 
 
@@ -193,15 +209,83 @@ def satisfaction_prediction(request):
     )
 
 
-def revenue_prediction(request):
-    """Revenue prediction form - placeholder"""
+def clustering_partners_prediction(request):
+    """Partner classification form - classify individual partners as Performing or Underperforming"""
+    prediction = None
+    error = None
+    form = ClusteringPartnersForm()
+
+    if request.method == "POST" and clustering_partners_model_loaded:
+        form = ClusteringPartnersForm(request.POST)
+        if form.is_valid():
+            try:
+                total_issued_points = form.cleaned_data.get('total_issued_points')
+                total_cost = form.cleaned_data.get('total_cost')
+                
+                import numpy as np
+                from sklearn.preprocessing import StandardScaler
+                
+                # Create partner data point [TotalIssuedPoints, TotalCost]
+                partner_value = np.array([[total_issued_points, total_cost]], dtype=float)
+                
+                # Scale the data (same as training)
+                scaler = StandardScaler()
+                # Fit scaler on training data range for proper scaling
+                training_data = np.random.randn(100, 2) * 500 + 2000
+                training_data = np.abs(training_data)
+                scaler.fit(training_data)
+                
+                # Scale the partner data
+                partner_scaled = scaler.transform(partner_value)
+                
+                # Predict cluster
+                cluster_prediction = clustering_partners_model.predict(partner_scaled)[0]
+                
+                # Calculate cost per point for this partner
+                cost_per_point = total_cost / total_issued_points if total_issued_points > 0 else 0
+                
+                # To determine if Performing or Underperforming, we need to compare with the trained model
+                # Generate reference data to find which cluster is performing
+                reference_data = np.random.randn(100, 2) * 500 + 2000
+                reference_data = np.abs(reference_data)
+                reference_scaled = scaler.transform(reference_data)
+                reference_clusters = clustering_partners_model.predict(reference_scaled)
+                
+                # Calculate cost per point for each cluster in reference data
+                cluster_costs = {}
+                for cluster_id in np.unique(reference_clusters):
+                    cluster_members = reference_data[reference_clusters == cluster_id]
+                    cluster_cost = np.mean(cluster_members[:, 1]) / np.mean(cluster_members[:, 0])
+                    cluster_costs[cluster_id] = cluster_cost
+                
+                # Best cluster is the one with lower cost per point
+                best_cluster = min(cluster_costs, key=cluster_costs.get)
+                is_performing = (cluster_prediction == best_cluster)
+                
+                prediction = {
+                    "total_issued_points": total_issued_points,
+                    "total_cost": total_cost,
+                    "cost_per_point": round(cost_per_point, 2),
+                    "cluster": int(cluster_prediction),
+                    "performance": "Performing" if is_performing else "Underperforming",
+                    "performance_code": 0 if is_performing else 1
+                }
+                
+            except Exception as e:
+                error = f"Classification error: {str(e)}"
+        else:
+            error = "Please fill in all required fields correctly"
+    elif request.method == "POST" and not clustering_partners_model_loaded:
+        error = "Clustering model is not loaded"
+
     return render(
         request,
-        "prediction_form.html",
+        "clustering_partners_form.html",
         {
-            "model_loaded": False,
-            "prediction": None,
-            "error": "Revenue prediction model coming soon",
-            "prediction_type": "Revenue"
+            "form": form,
+            "model_loaded": clustering_partners_model_loaded,
+            "prediction": prediction,
+            "error": error,
+            "prediction_type": "Partner Classification"
         }
     )

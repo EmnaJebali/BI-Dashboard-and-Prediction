@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Partner Classification - Airline Fidelity Program Analysis{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .main-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    .prediction-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+    }
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        background: white;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+        border-radius: 15px 15px 0 0 !important;
+    }
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    h5 {
+        color: #333;
+        font-weight: 700;
+    }
+    .badge {
+        font-size: 0.85rem;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .result-card {
+        margin-top: 2rem;
+        animation: slideIn 0.5s ease;
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .cluster-info {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #667eea;
+    }
+    .alert-warning {
+        background: #fff3cd;
+        border-color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="container prediction-container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h3 class="mb-0"><i class="bi bi-person-check"></i> Partner Classification</h3>
+            </div>
+            <div class="card-body">
+                {% if not model_loaded %}
+                    <div class="alert alert-warning" role="alert">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Model Not Loaded</h5>
+                        <p>Please ensure your clustering model file is placed in:</p>
+                        <ul>
+                            <li><code>ClusteringPartners.pkl</code> in the ml_models folder</li>
+                        </ul>
+                        <p class="mb-0">Or set the <code>CLUSTERING_PARTNERS_MODEL_PATH</code> in the views</p>
+                    </div>
+                {% endif %}
+
+                <form id="clusteringForm" method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Partner Information Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="bi bi-person-circle"></i> Partner Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.total_issued_points.id_for_label }}" class="form-label">{{ form.total_issued_points.label }}</label>
+                                {{ form.total_issued_points }}
+                                {% if form.total_issued_points.errors %}<div class="text-danger small mt-1">{{ form.total_issued_points.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.total_cost.id_for_label }}" class="form-label">{{ form.total_cost.label }}</label>
+                                {{ form.total_cost }}
+                                {% if form.total_cost.errors %}<div class="text-danger small mt-1">{{ form.total_cost.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" {% if not model_loaded %}disabled{% endif %}>
+                            <i class="bi bi-search"></i> Classify Partner
+                        </button>
+                    </div>
+                </form>
+
+                {% if prediction %}
+                    <div class="card result-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-center"><i class="bi bi-check-circle-fill text-success"></i> Classification Result</h5>
+                            
+                            <!-- Partner Classification -->
+                            <div class="text-center mb-4">
+                                <p class="mb-2">Partner Status:</p>
+                                <div style="font-size: 2.5rem; font-weight: 700; {% if prediction.performance == "Performing" %}color: #28a745;{% else %}color: #dc3545;{% endif %}">
+                                    {% if prediction.performance == "Performing" %}
+                                        <i class="bi bi-check-circle-fill"></i> {{ prediction.performance }}
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill"></i> {{ prediction.performance }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Partner Metrics -->
+                            <div class="mb-4">
+                                <h6 class="text-center mb-3">Partner Metrics</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Total Issued Points</strong></td>
+                                                <td>{{ prediction.total_issued_points }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Total Cost</strong></td>
+                                                <td>${{ prediction.total_cost }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Cost Per Point</strong></td>
+                                                <td>${{ prediction.cost_per_point }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Cluster Assignment</strong></td>
+                                                <td>Cluster {{ prediction.cluster }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if error %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        <i class="bi bi-exclamation-circle"></i> <strong>Error:</strong> {{ error }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script>
+        // Form validation
+        document.getElementById('clusteringForm')?.addEventListener('submit', function(e) {
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            this.classList.add('was-validated');
+        });
+    </script>
+{% endblock %}
