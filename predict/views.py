@@ -8,17 +8,19 @@ from django.conf import settings
 import os
 from .forms import SatisfactionForm
 
+
 FLIGHTS_MODEL_PATH = os.path.join(
     settings.BASE_DIR,
-    "static",
+    "ml_models",
     "FlightsPrediction.pkl"
 )
 
 SATISFACTION_MODEL_PATH = os.path.join(
     settings.BASE_DIR,
-    "static",
+    "ml_models",
     "satisfaction_model.joblib"
 )
+
 
 # Safely load the Prophet model for forecasting total number of flights
 model = None
@@ -39,6 +41,8 @@ try:
         satisfaction_model_loaded = True
 except Exception as e:
     print(f"Error loading satisfaction model: {e}")
+
+
 
 
 def prediction_selector(request):

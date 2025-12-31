@@ -138,8 +138,3 @@ MODEL_PATH = None
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-MODEL_PATH = os.path.join(
-    BASE_DIR,
-    "static",
-    "FlightsPrediction.pkl"
-)
