@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Churn Prediction - Airline Fidelity Program Analysis{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .main-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    .prediction-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+    }
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        background: white;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+        border-radius: 15px 15px 0 0 !important;
+    }
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    h5 {
+        color: #333;
+        font-weight: 700;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .result-card {
+        margin-top: 2rem;
+        animation: slideIn 0.5s ease;
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .churn-status {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 1rem 0;
+    }
+    .churn-status.high-risk {
+        color: #dc3545;
+    }
+    .churn-status.low-risk {
+        color: #28a745;
+    }
+    .risk-badge {
+        font-size: 1.2rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        display: inline-block;
+        margin-top: 1rem;
+    }
+    .risk-badge.high {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .risk-badge.medium {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .risk-badge.low {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .metric-box {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        text-align: center;
+    }
+    .metric-label {
+        font-size: 0.8rem;
+        color: #666;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .metric-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #333;
+    }
+    .error-message {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .warning-message {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .back-button {
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        padding: 0.5rem 1.5rem;
+        background-color: #f8f9fa;
+        border: 2px solid #ddd;
+        border-radius: 25px;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .back-button:hover {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
+        text-decoration: none;
+    }
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    .form-section:last-of-type {
+        border-bottom: none;
+    }
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .probability-bar {
+        height: 30px;
+        border-radius: 15px;
+        margin: 1rem 0;
+        position: relative;
+        overflow: hidden;
+        background-color: #e9ecef;
+    }
+    .probability-fill {
+        height: 100%;
+        border-radius: 15px;
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .probability-fill.churn {
+        background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+    }
+    .probability-fill.stay {
+        background: linear-gradient(90deg, #28a745 0%, #218838 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prediction-container">
+    <a href="{% url 'predict:prediction_selector' %}" class="back-button">
+        <i class="bi bi-arrow-left"></i> Back to Predictions
+    </a>
+
+    {% if not model_loaded %}
+    <div class="warning-message">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Warning:</strong> The churn prediction model is not currently loaded. Please ensure the model file (churn_prediction.pkl) is available in the ml_models folder.
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+                <div>
+                    <h4 class="mb-0">Customer Churn Prediction</h4>
+                    <p class="mb-0 small mt-1">Predict the likelihood of a customer churning based on their engagement metrics</p>
+                    <p class="mb-0 small mt-1" style="opacity: 0.9;"><i class="bi bi-info-circle"></i> Powered by Decision Tree model with preprocessing pipeline</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            {% if error %}
+            <div class="error-message">
+                <i class="bi bi-exclamation-circle"></i>
+                <strong>Error:</strong> {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" class="mb-4">
+                {% csrf_token %}
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-person-circle"></i>
+                        Customer Tier
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.tier_fk.id_for_label }}" class="form-label">
+                            {{ form.tier_fk.label }}
+                        </label>
+                        {{ form.tier_fk }}
+                        {% if form.tier_fk.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.tier_fk.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Enter the customer's loyalty tier (1 = lowest tier, 3 = highest tier)
+                        </small>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-airplane-engines"></i>
+                        Flight Activity
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.total_flights.id_for_label }}" class="form-label">
+                                {{ form.total_flights.label }}
+                            </label>
+                            {{ form.total_flights }}
+                            {% if form.total_flights.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.total_flights.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.distance.id_for_label }}" class="form-label">
+                                {{ form.distance.label }}
+                            </label>
+                            {{ form.distance }}
+                            {% if form.distance.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.distance.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-gift"></i>
+                        Loyalty Points
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.points_accumulated.id_for_label }}" class="form-label">
+                                {{ form.points_accumulated.label }}
+                            </label>
+                            {{ form.points_accumulated }}
+                            {% if form.points_accumulated.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.points_accumulated.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.points_redeemed.id_for_label }}" class="form-label">
+                                {{ form.points_redeemed.label }}
+                            </label>
+                            {{ form.points_redeemed }}
+                            {% if form.points_redeemed.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.points_redeemed.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.dollar_cost_points_redeemed.id_for_label }}" class="form-label">
+                            {{ form.dollar_cost_points_redeemed.label }}
+                        </label>
+                        {{ form.dollar_cost_points_redeemed }}
+                        {% if form.dollar_cost_points_redeemed.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.dollar_cost_points_redeemed.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-cash-stack"></i>
+                        Customer Value
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.clv.id_for_label }}" class="form-label">
+                            {{ form.clv.label }}
+                        </label>
+                        {{ form.clv }}
+                        {% if form.clv.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.clv.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" {% if not model_loaded %}disabled{% endif %}>
+                        <i class="bi bi-calculator"></i> Predict Churn Risk
+                    </button>
+                </div>
+            </form>
+
+            {% if prediction %}
+            <div class="result-card">
+                <div class="card" style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border: 2px solid {% if prediction.will_churn %}#dc3545{% else %}#28a745{% endif %};">
+                    <div class="card-body">
+                        <h5 class="mb-3">
+                            <i class="bi bi-check-circle" style="color: {% if prediction.will_churn %}#dc3545{% else %}#28a745{% endif %};"></i>
+                            Prediction Results
+                        </h5>
+
+                        <div class="text-center">
+                            <p class="text-muted mb-0">Churn Risk Assessment</p>
+                            <div class="churn-status {% if prediction.will_churn %}high-risk{% else %}low-risk{% endif %}">
+                                {% if prediction.will_churn %}
+                                    <i class="bi bi-exclamation-triangle-fill"></i> {{ prediction.churn_status }}
+                                {% else %}
+                                    <i class="bi bi-check-circle-fill"></i> {{ prediction.churn_status }}
+                                {% endif %}
+                            </div>
+                            <div class="risk-badge {% if prediction.risk_level == 'High' %}high{% elif prediction.risk_level == 'Medium' %}medium{% else %}low{% endif %}">
+                                {% if prediction.risk_level == 'High' %}
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                {% elif prediction.risk_level == 'Medium' %}
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-check-circle-fill"></i>
+                                {% endif %}
+                                {{ prediction.risk_level }} Risk
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h6 class="text-center mb-3">Churn Probability</h6>
+                            <div class="probability-bar">
+                                <div class="probability-fill churn" style="width: {{ prediction.churn_probability }}%;">
+                                    {% if prediction.churn_probability > 10 %}Churn: {{ prediction.churn_probability }}%{% endif %}
+                                </div>
+                            </div>
+                            <div class="probability-bar">
+                                <div class="probability-fill stay" style="width: {{ prediction.stay_probability }}%;">
+                                    {% if prediction.stay_probability > 10 %}Stay: {{ prediction.stay_probability }}%{% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-box">
+                                <div class="metric-label">Tier</div>
+                                <div class="metric-value">{{ prediction.tier_fk }}/3</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Total Flights</div>
+                                <div class="metric-value">{{ prediction.total_flights }}</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Distance</div>
+                                <div class="metric-value">{{ prediction.distance }}M</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Points Accumulated</div>
+                                <div class="metric-value">{{ prediction.points_accumulated }}</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Points Redeemed</div>
+                                <div class="metric-value">{{ prediction.points_redeemed }}</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">CLV</div>
+                                <div class="metric-value">${{ prediction.clv }}</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-4" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>What does this mean?</strong>
+                            <p class="mb-0">
+                                {% if prediction.will_churn %}
+                                    This customer has a high probability ({{ prediction.churn_probability }}%) of churning. 
+                                    Consider implementing retention strategies such as personalized offers, loyalty rewards, or proactive customer service outreach.
+                                {% else %}
+                                    This customer has a low probability ({{ prediction.churn_probability }}%) of churning and is likely to remain active. 
+                                    Continue to engage and provide value to maintain their loyalty.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

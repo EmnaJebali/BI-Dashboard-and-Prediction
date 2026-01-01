@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.conf import settings
 import os
 import numpy as np
-from .forms import SatisfactionForm, ClusteringPartnersForm, CLVForm
+from .forms import SatisfactionForm, ClusteringPartnersForm, CLVForm, ChurnForm
 
 
 FLIGHTS_MODEL_PATH = os.path.join(
@@ -32,6 +32,12 @@ CLV_MODEL_PATH = os.path.join(
     settings.BASE_DIR,
     "ml_models",
     "clv_model.pkl"
+)
+
+CHURN_MODEL_PATH = os.path.join(
+    settings.BASE_DIR,
+    "ml_models",
+    "churn_prediction.pkl"
 )
 
 
@@ -75,6 +81,16 @@ try:
         clv_model_loaded = True
 except Exception as e:
     print(f"Error loading CLV model: {e}")
+
+# Safely load the churn prediction model (Decision Tree pipeline)
+churn_model = None
+churn_model_loaded = False
+try:
+    if os.path.exists(CHURN_MODEL_PATH):
+        churn_model = joblib.load(CHURN_MODEL_PATH)
+        churn_model_loaded = True
+except Exception as e:
+    print(f"Error loading churn model: {e}")
 
 
 
@@ -381,6 +397,76 @@ def clv_prediction(request):
             "prediction": prediction,
             "error": error,
             "prediction_type": "Customer Lifetime Value"
+        }
+    )
+
+
+def churn_prediction(request):
+    """Customer churn prediction form"""
+    prediction = None
+    error = None
+    form = ChurnForm()
+
+    if request.method == "POST" and churn_model_loaded:
+        form = ChurnForm(request.POST)
+        if form.is_valid():
+            try:
+                # Extract form data
+                data = form.cleaned_data
+                
+                # Prepare features in correct order for model
+                # Feature order: Tier_fk, TotalFlights, Distance, PointsAccumulated, 
+                #              PointsRedeemed, DollarCostPointsRedeemed, CLV
+                # Note: The model pipeline handles preprocessing (OneHotEncoder for Tier_fk)
+                features = pd.DataFrame({
+                    'Tier_fk': [int(data.get('tier_fk'))],
+                    'TotalFlights': [int(data.get('total_flights'))],
+                    'Distance': [int(data.get('distance'))],
+                    'PointsAccumulated': [int(data.get('points_accumulated'))],
+                    'PointsRedeemed': [int(data.get('points_redeemed'))],
+                    'DollarCostPointsRedeemed': [float(data.get('dollar_cost_points_redeemed'))],
+                    'CLV': [float(data.get('clv'))]
+                })
+                
+                # Make prediction using the pipeline (includes preprocessing)
+                churn_prediction_result = churn_model.predict(features)[0]
+                churn_probability = churn_model.predict_proba(features)[0]
+                
+                # Get probabilities for each class
+                # Class 0 = Not Churned, Class 1 = Churned
+                prob_not_churned = float(churn_probability[0])
+                prob_churned = float(churn_probability[1])
+                
+                prediction = {
+                    "will_churn": bool(churn_prediction_result),
+                    "churn_status": "High Risk - Likely to Churn" if churn_prediction_result == 1 else "Low Risk - Likely to Stay",
+                    "churn_probability": round(prob_churned * 100, 2),
+                    "stay_probability": round(prob_not_churned * 100, 2),
+                    "tier_fk": int(data.get('tier_fk')),
+                    "total_flights": int(data.get('total_flights')),
+                    "distance": int(data.get('distance')),
+                    "points_accumulated": int(data.get('points_accumulated')),
+                    "points_redeemed": int(data.get('points_redeemed')),
+                    "dollar_cost_points_redeemed": round(float(data.get('dollar_cost_points_redeemed')), 2),
+                    "clv": round(float(data.get('clv')), 2),
+                    "risk_level": "High" if prob_churned > 0.5 else "Medium" if prob_churned > 0.3 else "Low"
+                }
+            except Exception as e:
+                error = f"Prediction error: {str(e)}"
+        else:
+            error = "Please fill in all required fields correctly"
+    elif request.method == "POST" and not churn_model_loaded:
+        error = "Churn prediction model is not loaded"
+
+    return render(
+        request,
+        "churn_form.html",
+        {
+            "form": form,
+            "model_loaded": churn_model_loaded,
+            "prediction": prediction,
+            "error": error,
+            "prediction_type": "Customer Churn Prediction"
         }
     )
 

@@ -186,6 +186,29 @@
                     </div>
                 </a>
             </div>
+
+            <!-- Churn Prediction -->
+            <div class="col-md-6 col-lg-4">
+                <a href="{% url 'predict:churn_prediction' %}" class="card-link">
+                    <div class="prediction-card">
+                        <div class="prediction-card-header">
+                            <i class="bi bi-exclamation-triangle-fill prediction-icon"></i>
+                            <h3 class="mb-0">Churn</h3>
+                        </div>
+                        <div class="prediction-card-body">
+                            <div>
+                                <p class="prediction-title">Customer Churn Prediction</p>
+                                <p class="prediction-description">
+                                    Predict the likelihood of a customer churning based on their engagement metrics and behavior patterns.
+                                </p>
+                            </div>
+                            <button class="btn btn-select w-100">
+                                <i class="bi bi-arrow-right-circle"></i> Select
+                            </button>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
 {% endblock %}

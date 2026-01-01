@@ -204,3 +204,42 @@ class CLVForm(forms.Form):
         label="Current/Historical CLV ($)",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter current customer lifetime value'})
     )
+
+
+class ChurnForm(forms.Form):
+    tier_fk = forms.IntegerField(
+        min_value=1,
+        max_value=3,
+        label="Loyalty Tier (1-3)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter tier (1=lowest, 3=highest)'})
+    )
+    total_flights = forms.IntegerField(
+        min_value=0,
+        label="Total Flights",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total number of flights'})
+    )
+    distance = forms.IntegerField(
+        min_value=0,
+        label="Total Distance Flown (miles)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total distance in miles'})
+    )
+    points_accumulated = forms.IntegerField(
+        min_value=0,
+        label="Points Accumulated",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total loyalty points earned'})
+    )
+    points_redeemed = forms.IntegerField(
+        min_value=0,
+        label="Points Redeemed",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total loyalty points used'})
+    )
+    dollar_cost_points_redeemed = forms.FloatField(
+        min_value=0,
+        label="Dollar Cost of Points Redeemed ($)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total dollar value of redeemed points'})
+    )
+    clv = forms.FloatField(
+        min_value=0,
+        label="Customer Lifetime Value ($)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Current customer lifetime value'})
+    )

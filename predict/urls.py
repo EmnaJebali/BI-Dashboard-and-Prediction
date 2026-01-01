@@ -6,7 +6,8 @@ from .views import (
     flights_prediction,
     satisfaction_prediction,
     clustering_partners_prediction,
-    clv_prediction
+    clv_prediction,
+    churn_prediction
 )
 
 app_name = "predict"
@@ -17,5 +18,6 @@ urlpatterns = [
     path("satisfaction/", satisfaction_prediction, name="satisfaction_prediction"),
     path("clustering-partners/", clustering_partners_prediction, name="clustering_partners_prediction"),
     path("clv/", clv_prediction, name="clv_prediction"),
+    path("churn/", churn_prediction, name="churn_prediction"),
     path("api/forecast/", ForecastAPIView.as_view(), name="forecast_api"),
 ]
