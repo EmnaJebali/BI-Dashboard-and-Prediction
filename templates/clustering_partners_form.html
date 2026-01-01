@@ -82,11 +82,32 @@
         background: #fff3cd;
         border-color: #ffc107;
     }
+    .back-button {
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        padding: 0.5rem 1.5rem;
+        background-color: #f8f9fa;
+        border: 2px solid #ddd;
+        border-radius: 25px;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .back-button:hover {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
+        text-decoration: none;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
     <div class="container prediction-container">
+        <a href="{% url 'predict:prediction_selector' %}" class="back-button">
+            <i class="bi bi-arrow-left"></i> Back to Predictions
+        </a>
         <div class="card">
             <div class="card-header text-center">
                 <h3 class="mb-0"><i class="bi bi-person-check"></i> Partner Classification</h3>

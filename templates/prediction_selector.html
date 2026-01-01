@@ -163,6 +163,29 @@
                     </div>
                 </a>
             </div>
+
+            <!-- Customer Lifetime Value Prediction -->
+            <div class="col-md-6 col-lg-4">
+                <a href="{% url 'predict:clv_prediction' %}" class="card-link">
+                    <div class="prediction-card">
+                        <div class="prediction-card-header">
+                            <i class="bi bi-currency-dollar prediction-icon"></i>
+                            <h3 class="mb-0">CLV</h3>
+                        </div>
+                        <div class="prediction-card-body">
+                            <div>
+                                <p class="prediction-title">Customer Lifetime Value</p>
+                                <p class="prediction-description">
+                                    Estimate the total revenue a customer will generate over their lifetime relationship.
+                                </p>
+                            </div>
+                            <button class="btn btn-select w-100">
+                                <i class="bi bi-arrow-right-circle"></i> Select
+                            </button>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
 {% endblock %}

@@ -161,3 +161,46 @@ class ClusteringPartnersForm(forms.Form):
         label="Total Cost",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter total cost of issued points'})
     )
+
+class CLVForm(forms.Form):
+    salary = forms.IntegerField(
+        min_value=0,
+        label="Annual Salary ($)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter annual salary'})
+    )
+    tier_rank = forms.IntegerField(
+        min_value=1,
+        max_value=3,
+        label="Loyalty Tier Rank (1-3)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter tier rank (1=lowest, 3=highest)'})
+    )
+    tenure_months = forms.IntegerField(
+        min_value=0,
+        label="Tenure (months)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'How many months as customer'})
+    )
+    total_flights = forms.IntegerField(
+        min_value=0,
+        label="Total Flights",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total number of flights'})
+    )
+    distance = forms.IntegerField(
+        min_value=0,
+        label="Total Distance Flown (miles)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total distance in miles'})
+    )
+    points_accumulated = forms.IntegerField(
+        min_value=0,
+        label="Points Accumulated",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total loyalty points earned'})
+    )
+    points_redeemed = forms.IntegerField(
+        min_value=0,
+        label="Points Redeemed",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total loyalty points used'})
+    )
+    current_clv = forms.FloatField(
+        min_value=0,
+        label="Current/Historical CLV ($)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter current customer lifetime value'})
+    )

@@ -6,7 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.conf import settings
 import os
-from .forms import SatisfactionForm, ClusteringPartnersForm
+import numpy as np
+from .forms import SatisfactionForm, ClusteringPartnersForm, CLVForm
 
 
 FLIGHTS_MODEL_PATH = os.path.join(
@@ -25,6 +26,12 @@ CLUSTERING_PARTNERS_MODEL_PATH = os.path.join(
     settings.BASE_DIR,
     "ml_models",
     "ClusteringPartners.pkl"
+)
+
+CLV_MODEL_PATH = os.path.join(
+    settings.BASE_DIR,
+    "ml_models",
+    "clv_model.pkl"
 )
 
 
@@ -57,6 +64,16 @@ try:
         clustering_partners_model_loaded = True
 except Exception as e:
     print(f"Error loading clustering partners model: {e}")
+
+# Safely load the CLV model
+clv_model = None
+clv_model_loaded = False
+try:
+    if os.path.exists(CLV_MODEL_PATH):
+        clv_model = joblib.load(CLV_MODEL_PATH)
+        clv_model_loaded = True
+except Exception as e:
+    print(f"Error loading CLV model: {e}")
 
 
 
@@ -289,3 +306,77 @@ def clustering_partners_prediction(request):
             "prediction_type": "Partner Classification"
         }
     )
+
+
+def clv_prediction(request):
+    """Customer Lifetime Value prediction form"""
+    prediction = None
+    error = None
+    form = CLVForm()
+
+    if request.method == "POST" and clv_model_loaded:
+        form = CLVForm(request.POST)
+        if form.is_valid():
+            try:
+                # Extract form data
+                data = form.cleaned_data
+                
+                # Calculate derived features based on notebook
+                points_ratio = data.get('points_redeemed') / (data.get('points_accumulated') + 1)
+                flight_distance_ratio = data.get('distance') / (data.get('total_flights') + 1)
+                engagement_ratio = data.get('total_flights') / (data.get('tenure_months') + 1)
+                
+                # Prepare features in correct order for model
+                # Feature order: Salary, TierRank, TenureMonths, TotalFlights, Distance, 
+                #              PointsAccumulated, PointsRedeemed, PointsRatio, FlightDistanceRatio, CLV, EngagementRatio
+                # Using current/historical CLV to predict future CLV
+                current_clv = data.get('current_clv', 0)
+                
+                features = [
+                    float(data.get('salary')),
+                    float(data.get('tier_rank')),
+                    float(data.get('tenure_months')),
+                    float(data.get('total_flights')),
+                    float(data.get('distance')),
+                    float(data.get('points_accumulated')),
+                    float(data.get('points_redeemed')),
+                    float(points_ratio),
+                    float(flight_distance_ratio),
+                    float(current_clv),  # Current/Historical CLV (10th position) - used to predict future CLV
+                    float(engagement_ratio),
+                ]
+                
+                # Make prediction (model outputs log-transformed value)
+                clv_log_prediction = clv_model.predict([features])
+                clv_value = np.expm1(clv_log_prediction[0])  # Convert back from log space
+                
+                prediction = {
+                    "clv_value": round(clv_value, 2),
+                    "tenure_months": int(data.get('tenure_months')),
+                    "tenure_years": round(int(data.get('tenure_months')) / 12, 1),
+                    "total_flights": int(data.get('total_flights')),
+                    "total_distance": int(data.get('distance')),
+                    "tier_rank": int(data.get('tier_rank')),
+                    "salary": int(data.get('salary')),
+                    "engagement_ratio": round(engagement_ratio, 2),
+                    "clv_category": "High Value" if clv_value > 10000 else "Medium Value" if clv_value > 5000 else "Low Value"
+                }
+            except Exception as e:
+                error = f"Prediction error: {str(e)}"
+        else:
+            error = "Please fill in all required fields correctly"
+    elif request.method == "POST" and not clv_model_loaded:
+        error = "CLV model is not loaded"
+
+    return render(
+        request,
+        "clv_form.html",
+        {
+            "form": form,
+            "model_loaded": clv_model_loaded,
+            "prediction": prediction,
+            "error": error,
+            "prediction_type": "Customer Lifetime Value"
+        }
+    )
+
