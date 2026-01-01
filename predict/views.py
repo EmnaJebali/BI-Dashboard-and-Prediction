@@ -65,7 +65,8 @@ try:
 except Exception as e:
     print(f"Error loading clustering partners model: {e}")
 
-# Safely load the CLV model
+# Safely load the CLV model (XGBoost)
+# Model was trained on log1p(CLV) values, so predictions need expm1() transformation
 clv_model = None
 clv_model_loaded = False
 try:
@@ -326,7 +327,7 @@ def clv_prediction(request):
                 flight_distance_ratio = data.get('distance') / (data.get('total_flights') + 1)
                 engagement_ratio = data.get('total_flights') / (data.get('tenure_months') + 1)
                 
-                # Prepare features in correct order for model
+                # Prepare features in correct order for XGBoost model
                 # Feature order: Salary, TierRank, TenureMonths, TotalFlights, Distance, 
                 #              PointsAccumulated, PointsRedeemed, PointsRatio, FlightDistanceRatio, CLV, EngagementRatio
                 # Using current/historical CLV to predict future CLV
@@ -346,9 +347,12 @@ def clv_prediction(request):
                     float(engagement_ratio),
                 ]
                 
-                # Make prediction (model outputs log-transformed value)
+                # XGBoost Prediction:
+                # - Uses pre-trained XGBoost model (clv_model.pkl)
+                # - Model was trained on log1p(CLV) values
+                # - Applies expm1() to reverse the log transformation
                 clv_log_prediction = clv_model.predict([features])
-                clv_value = np.expm1(clv_log_prediction[0])  # Convert back from log space
+                clv_value = np.expm1(clv_log_prediction[0])  # Convert from log1p space back to original CLV scale
                 
                 prediction = {
                     "clv_value": round(clv_value, 2),
