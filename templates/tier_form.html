@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Loyalty Tier Prediction - Airline Fidelity Program Analysis{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .main-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    .prediction-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+    }
+    .card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        background: white;
+    }
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1.5rem;
+        border-radius: 15px 15px 0 0 !important;
+    }
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    h5 {
+        color: #333;
+        font-weight: 700;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    .result-card {
+        margin-top: 2rem;
+        animation: slideIn 0.5s ease;
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .tier-value {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 1rem 0;
+    }
+    .tier-value.aurora {
+        color: #6c757d;
+    }
+    .tier-value.nova {
+        color: #0d6efd;
+    }
+    .tier-value.star {
+        color: #ffc107;
+    }
+    .tier-badge {
+        font-size: 1.2rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        display: inline-block;
+        margin-top: 1rem;
+    }
+    .tier-badge.aurora {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    .tier-badge.nova {
+        background-color: #cfe2ff;
+        color: #084298;
+    }
+    .tier-badge.star {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .metric-box {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        text-align: center;
+    }
+    .metric-label {
+        font-size: 0.8rem;
+        color: #666;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .metric-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #333;
+    }
+    .error-message {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .warning-message {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .back-button {
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        padding: 0.5rem 1.5rem;
+        background-color: #f8f9fa;
+        border: 2px solid #ddd;
+        border-radius: 25px;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .back-button:hover {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
+        text-decoration: none;
+    }
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    .form-section:last-of-type {
+        border-bottom: none;
+    }
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .probability-bar {
+        height: 30px;
+        border-radius: 15px;
+        margin: 0.5rem 0;
+        position: relative;
+        overflow: hidden;
+        background-color: #e9ecef;
+    }
+    .probability-fill {
+        height: 100%;
+        border-radius: 15px;
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .probability-fill.aurora {
+        background: linear-gradient(90deg, #6c757d 0%, #495057 100%);
+    }
+    .probability-fill.nova {
+        background: linear-gradient(90deg, #0d6efd 0%, #084298 100%);
+    }
+    .probability-fill.star {
+        background: linear-gradient(90deg, #ffc107 0%, #ffb300 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prediction-container">
+    <a href="{% url 'predict:prediction_selector' %}" class="back-button">
+        <i class="bi bi-arrow-left"></i> Back to Predictions
+    </a>
+
+    {% if not model_loaded %}
+    <div class="warning-message">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Warning:</strong> The tier prediction model is not currently loaded. Please ensure the model file (tier_model.pkl) is available in the ml_models folder.
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-star-fill" style="font-size: 2.5rem;"></i>
+                <div>
+                    <h4 class="mb-0">Loyalty Tier Prediction</h4>
+                    <p class="mb-0 small mt-1">Predict the appropriate loyalty tier for a customer based on their engagement and value metrics</p>
+                    <p class="mb-0 small mt-1" style="opacity: 0.9;"><i class="bi bi-info-circle"></i> Powered by PCA + KNN model</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            {% if error %}
+            <div class="error-message">
+                <i class="bi bi-exclamation-circle"></i>
+                <strong>Error:</strong> {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" class="mb-4">
+                {% csrf_token %}
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-airplane-engines"></i>
+                        Flight Activity
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.total_flights.id_for_label }}" class="form-label">
+                                {{ form.total_flights.label }}
+                            </label>
+                            {{ form.total_flights }}
+                            {% if form.total_flights.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.total_flights.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.distance.id_for_label }}" class="form-label">
+                                {{ form.distance.label }}
+                            </label>
+                            {{ form.distance }}
+                            {% if form.distance.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.distance.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-gift"></i>
+                        Loyalty Points
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.points_accumulated.id_for_label }}" class="form-label">
+                                {{ form.points_accumulated.label }}
+                            </label>
+                            {{ form.points_accumulated }}
+                            {% if form.points_accumulated.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.points_accumulated.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.points_redeemed.id_for_label }}" class="form-label">
+                                {{ form.points_redeemed.label }}
+                            </label>
+                            {{ form.points_redeemed }}
+                            {% if form.points_redeemed.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.points_redeemed.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="bi bi-cash-stack"></i>
+                        Customer Value
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.clv.id_for_label }}" class="form-label">
+                            {{ form.clv.label }}
+                        </label>
+                        {{ form.clv }}
+                        {% if form.clv.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.clv.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" {% if not model_loaded %}disabled{% endif %}>
+                        <i class="bi bi-calculator"></i> Predict Tier
+                    </button>
+                </div>
+            </form>
+
+            {% if prediction %}
+            <div class="result-card">
+                <div class="card" style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border: 2px solid #667eea;">
+                    <div class="card-body">
+                        <h5 class="mb-3">
+                            <i class="bi bi-check-circle" style="color: #28a745;"></i>
+                            Prediction Results
+                        </h5>
+
+                        <div class="text-center">
+                            <p class="text-muted mb-0">Recommended Loyalty Tier</p>
+                            <div class="tier-value {{ prediction.predicted_tier|lower }}">
+                                <i class="bi bi-star-fill"></i> {{ prediction.predicted_tier }}
+                            </div>
+                            <div class="tier-badge {{ prediction.predicted_tier|lower }}">
+                                {{ prediction.tier_description }}
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h6 class="text-center mb-3">Tier Probabilities</h6>
+                            {% for tier_name, prob in prediction.probabilities.items %}
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><strong>{{ tier_name }}</strong></span>
+                                    <span><strong>{{ prob }}%</strong></span>
+                                </div>
+                                <div class="probability-bar">
+                                    <div class="probability-fill {{ tier_name|lower }}" style="width: {{ prob }}%;">
+                                        {% if prob > 5 %}{{ prob }}%{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-box">
+                                <div class="metric-label">Total Flights</div>
+                                <div class="metric-value">{{ prediction.total_flights }}</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Distance</div>
+                                <div class="metric-value">{{ prediction.distance }}M</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Points Accumulated</div>
+                                <div class="metric-value">{{ prediction.points_accumulated }}</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Points Redeemed</div>
+                                <div class="metric-value">{{ prediction.points_redeemed }}</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">CLV</div>
+                                <div class="metric-value">${{ prediction.clv }}</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-4" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>What does this mean?</strong>
+                            <p class="mb-0">
+                                Based on the customer's engagement metrics, the model recommends the <strong>{{ prediction.predicted_tier }}</strong> tier. 
+                                This tier is appropriate for customers with similar activity levels and value. Consider offering tier upgrade opportunities 
+                                or benefits aligned with this tier level to enhance customer loyalty.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

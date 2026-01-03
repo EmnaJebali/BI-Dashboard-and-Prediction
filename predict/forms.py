@@ -243,3 +243,31 @@ class ChurnForm(forms.Form):
         label="Customer Lifetime Value ($)",
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Current customer lifetime value'})
     )
+
+
+class TierForm(forms.Form):
+    distance = forms.IntegerField(
+        min_value=0,
+        label="Total Distance Flown (miles)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total distance in miles'})
+    )
+    clv = forms.FloatField(
+        min_value=0,
+        label="Customer Lifetime Value ($)",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Current customer lifetime value'})
+    )
+    points_accumulated = forms.IntegerField(
+        min_value=0,
+        label="Points Accumulated",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total loyalty points earned'})
+    )
+    total_flights = forms.IntegerField(
+        min_value=0,
+        label="Total Flights",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total number of flights'})
+    )
+    points_redeemed = forms.IntegerField(
+        min_value=0,
+        label="Points Redeemed",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total loyalty points used'})
+    )

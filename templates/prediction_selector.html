@@ -209,6 +209,29 @@
                     </div>
                 </a>
             </div>
+
+            <!-- Tier Prediction -->
+            <div class="col-md-6 col-lg-4">
+                <a href="{% url 'predict:tier_prediction' %}" class="card-link">
+                    <div class="prediction-card">
+                        <div class="prediction-card-header">
+                            <i class="bi bi-star-fill prediction-icon"></i>
+                            <h3 class="mb-0">Tier</h3>
+                        </div>
+                        <div class="prediction-card-body">
+                            <div>
+                                <p class="prediction-title">Loyalty Tier Prediction</p>
+                                <p class="prediction-description">
+                                    Predict the appropriate loyalty tier for a customer based on their engagement and value metrics.
+                                </p>
+                            </div>
+                            <button class="btn btn-select w-100">
+                                <i class="bi bi-arrow-right-circle"></i> Select
+                            </button>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
 {% endblock %}

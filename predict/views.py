@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.conf import settings
 import os
 import numpy as np
-from .forms import SatisfactionForm, ClusteringPartnersForm, CLVForm, ChurnForm
+from .forms import SatisfactionForm, ClusteringPartnersForm, CLVForm, ChurnForm, TierForm
 
 
 FLIGHTS_MODEL_PATH = os.path.join(
@@ -38,6 +38,12 @@ CHURN_MODEL_PATH = os.path.join(
     settings.BASE_DIR,
     "ml_models",
     "churn_prediction.pkl"
+)
+
+TIER_MODEL_PATH = os.path.join(
+    settings.BASE_DIR,
+    "ml_models",
+    "tier_model.pkl"
 )
 
 
@@ -91,6 +97,16 @@ try:
         churn_model_loaded = True
 except Exception as e:
     print(f"Error loading churn model: {e}")
+
+# Safely load the tier prediction model (PCA + KNN)
+tier_model = None
+tier_model_loaded = False
+try:
+    if os.path.exists(TIER_MODEL_PATH):
+        tier_model = joblib.load(TIER_MODEL_PATH)
+        tier_model_loaded = True
+except Exception as e:
+    print(f"Error loading tier model: {e}")
 
 
 
@@ -467,6 +483,80 @@ def churn_prediction(request):
             "prediction": prediction,
             "error": error,
             "prediction_type": "Customer Churn Prediction"
+        }
+    )
+
+
+def tier_prediction(request):
+    """Loyalty tier prediction form"""
+    prediction = None
+    error = None
+    form = TierForm()
+
+    if request.method == "POST" and tier_model_loaded:
+        form = TierForm(request.POST)
+        if form.is_valid():
+            try:
+                # Extract form data
+                data = form.cleaned_data
+                
+                # Prepare features in correct order for model
+                # Feature order: Distance, CLV, Points Accumulated, Total Flights, Points Redeemed
+                # Model uses PCA + KNN pipeline
+                features = pd.DataFrame({
+                    'Distance': [int(data.get('distance'))],
+                    'CLV': [float(data.get('clv'))],
+                    'Points Accumulated': [int(data.get('points_accumulated'))],
+                    'Total Flights': [int(data.get('total_flights'))],
+                    'Points Redeemed': [int(data.get('points_redeemed'))]
+                })
+                
+                # Make prediction using the PCA + KNN pipeline
+                tier_prediction_result = tier_model.predict(features)[0]
+                tier_probabilities = tier_model.predict_proba(features)[0]
+                
+                # Map encoded tier back to tier names
+                # Based on notebook: 0=Aurora, 1=Nova, 2=Star (or similar encoding)
+                tier_names = ['Aurora', 'Nova', 'Star']
+                tier_name = tier_names[int(tier_prediction_result)] if int(tier_prediction_result) < len(tier_names) else f"Tier {int(tier_prediction_result)}"
+                
+                # Get probabilities for each tier
+                tier_probs = {}
+                for i, prob in enumerate(tier_probabilities):
+                    tier_label = tier_names[i] if i < len(tier_names) else f"Tier {i}"
+                    tier_probs[tier_label] = round(float(prob) * 100, 2)
+                
+                prediction = {
+                    "predicted_tier": tier_name,
+                    "tier_code": int(tier_prediction_result),
+                    "probabilities": tier_probs,
+                    "distance": int(data.get('distance')),
+                    "clv": round(float(data.get('clv')), 2),
+                    "points_accumulated": int(data.get('points_accumulated')),
+                    "total_flights": int(data.get('total_flights')),
+                    "points_redeemed": int(data.get('points_redeemed')),
+                    "tier_description": {
+                        'Aurora': 'Entry-level tier with basic benefits',
+                        'Nova': 'Mid-tier with enhanced rewards and perks',
+                        'Star': 'Premium tier with exclusive benefits and highest rewards'
+                    }.get(tier_name, 'Loyalty tier membership')
+                }
+            except Exception as e:
+                error = f"Prediction error: {str(e)}"
+        else:
+            error = "Please fill in all required fields correctly"
+    elif request.method == "POST" and not tier_model_loaded:
+        error = "Tier prediction model is not loaded"
+
+    return render(
+        request,
+        "tier_form.html",
+        {
+            "form": form,
+            "model_loaded": tier_model_loaded,
+            "prediction": prediction,
+            "error": error,
+            "prediction_type": "Loyalty Tier Prediction"
         }
     )
 
