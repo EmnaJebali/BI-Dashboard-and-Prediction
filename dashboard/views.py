@@ -13,7 +13,7 @@ def home(request):
 
 
 def powerbi_dashboard(request):
-    """View to redirect to Power BI dashboard in the same tab for proper authentication"""
+    """View to provide Power BI dashboard access options"""
     import urllib.parse
     
     # Get Power BI embed URL from settings or environment variable
@@ -30,15 +30,15 @@ def powerbi_dashboard(request):
     else:
         powerbi_url = str(powerbi_url).strip()
     
-    # If URL is configured, redirect directly to PowerBI in the same tab
-    # This allows proper authentication flow without iframe limitations
-    if powerbi_url and powerbi_url.strip():
-        print(f"Redirecting to Power BI URL: {powerbi_url}")
+    # Check if user wants to redirect to PowerBI (query parameter)
+    redirect_mode = request.GET.get('redirect', 'false').lower() == 'true'
+    
+    if redirect_mode and powerbi_url and powerbi_url.strip():
+        # Redirect to PowerBI in the same tab
         return redirect(powerbi_url)
     
-    # If no URL is configured, show configuration message
     context = {
-        'powerbi_url': '',
+        'powerbi_url': powerbi_url,
     }
     return render(request, 'powerbi_dashboard.html', context)
 

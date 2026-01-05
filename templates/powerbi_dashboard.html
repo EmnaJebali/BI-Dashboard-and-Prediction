@@ -8,19 +8,60 @@
         background: #f5f5f5;
     }
     .dashboard-container {
-        padding: 2rem;
+        padding: 3rem 2rem;
         background: white;
         border-radius: 10px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         margin: 2rem;
-    }
-    .redirect-message {
         text-align: center;
-        padding: 3rem 2rem;
     }
-    .spinner-border {
-        width: 3rem;
-        height: 3rem;
+    .powerbi-options {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 600px;
+        margin: 2rem auto;
+    }
+    .option-card {
+        padding: 2rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        background: #f9f9f9;
+        transition: all 0.3s ease;
+    }
+    .option-card:hover {
+        border-color: #007bff;
+        background: #f0f7ff;
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    .option-card h4 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+    .option-card p {
+        color: #666;
+        margin-bottom: 1.5rem;
+    }
+    .btn-lg {
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+    }
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 2rem 1rem;
+            margin: 1rem;
+        }
+        .powerbi-options {
+            margin: 1rem auto;
+        }
+        .option-card {
+            padding: 1.5rem;
+        }
+    }
+    .icon-large {
+        font-size: 3rem;
+        color: #007bff;
+        margin-bottom: 1rem;
     }
 </style>
 {% endblock %}
@@ -29,22 +70,42 @@
     <div class="container-fluid">
         <div class="dashboard-container">
             {% if powerbi_url and powerbi_url|length > 0 %}
-                <div class="redirect-message">
-                    <div class="spinner-border text-primary mb-4" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h4>Redirecting to Power BI Dashboard...</h4>
-                    <p class="text-muted mt-3">You will be redirected to Power BI in a moment.</p>
-                    <p class="text-muted">If you are not redirected automatically, <a href="{{ powerbi_url }}" id="powerbi-link">click here</a>.</p>
+                <div class="mb-4">
+                    <i class="bi bi-graph-up-arrow icon-large"></i>
+                    <h2 class="mb-3">Power BI Dashboard</h2>
+                    <p class="text-muted">Choose how you'd like to open the Power BI dashboard:</p>
                 </div>
-                <script>
-                    // Redirect immediately to PowerBI in the same tab
-                    window.location.href = '{{ powerbi_url }}';
-                </script>
+                
+                <div class="powerbi-options">
+                    <div class="option-card">
+                        <i class="bi bi-arrow-right-circle icon-large"></i>
+                        <h4>Open in Same Tab</h4>
+                        <p>Opens the dashboard in the current tab. Recommended for the best authentication experience.</p>
+                        <a href="?redirect=true" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-right-circle"></i> Open in Same Tab
+                        </a>
+                    </div>
+                    
+                    <div class="option-card">
+                        <i class="bi bi-box-arrow-up-right icon-large"></i>
+                        <h4>Open in New Tab</h4>
+                        <p>Opens the dashboard in a new browser tab, keeping this page open.</p>
+                        <a href="{{ powerbi_url }}" target="_blank" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-box-arrow-up-right"></i> Open in New Tab
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> 
+                        The dashboard will handle authentication automatically when opened.
+                    </small>
+                </div>
             {% else %}
                 <div class="alert alert-info" role="alert">
                     <h4 class="alert-heading"><i class="bi bi-info-circle"></i> Power BI URL Not Configured</h4>
-                    <p>To display your Power BI dashboard, please configure the embed URL:</p>
+                    <p>To access your Power BI dashboard, please configure the embed URL:</p>
                     <hr>
                     <p class="mb-0">
                         <strong>Option 1:</strong> Set the <code>POWERBI_EMBED_URL</code> in <code>airline/settings.py</code><br>
@@ -65,4 +126,3 @@
         </div>
     </div>
 {% endblock %}
-
