@@ -14,32 +14,13 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         margin: 2rem;
     }
-    .powerbi-iframe {
-        width: 100%;
-        height: 600px;
-        min-height: 600px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        background: #f5f5f5;
+    .redirect-message {
+        text-align: center;
+        padding: 3rem 2rem;
     }
-    #powerbi-loading {
-        min-height: 600px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-    @media (max-width: 768px) {
-        .powerbi-iframe {
-            height: 400px;
-            min-height: 400px;
-        }
-    }
-    .alert-info {
-        background: #e7f3ff;
-        border-color: #b3d9ff;
-        color: #004085;
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
     }
 </style>
 {% endblock %}
@@ -47,86 +28,19 @@
 {% block content %}
     <div class="container-fluid">
         <div class="dashboard-container">
-            <!-- Debug: powerbi_url = {{ powerbi_url|default:"NOT SET" }} -->
             {% if powerbi_url and powerbi_url|length > 0 %}
-                <div class="alert alert-info mb-3 d-flex justify-content-between align-items-center" role="alert">
-                    <div>
-                        <i class="bi bi-info-circle"></i> 
-                        <strong>Note:</strong> If authentication popup doesn't work, use the button below to open in a new tab.
-                    </div>
-                    <a href="{{ powerbi_url }}" target="_blank" class="btn btn-sm btn-primary">
-                        <i class="bi bi-box-arrow-up-right"></i> Open in New Tab
-                    </a>
-                </div>
-                <div id="powerbi-loading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
+                <div class="redirect-message">
+                    <div class="spinner-border text-primary mb-4" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-3">Loading Power BI dashboard...</p>
-                    <small class="text-muted">The dashboard will appear below once loaded.</small>
-                    <div class="mt-3">
-                        <small class="text-info">
-                            <strong>Debug Info:</strong> Check browser console (F12) for details. 
-                            If you see a sign-in prompt in the iframe, complete it to view the dashboard.
-                        </small>
-                    </div>
+                    <h4>Redirecting to Power BI Dashboard...</h4>
+                    <p class="text-muted mt-3">You will be redirected to Power BI in a moment.</p>
+                    <p class="text-muted">If you are not redirected automatically, <a href="{{ powerbi_url }}" id="powerbi-link">click here</a>.</p>
                 </div>
-                <div id="powerbi-error" style="display: none;" class="alert alert-danger">
-                    <i class="bi bi-exclamation-circle"></i> 
-                    <strong>Error loading dashboard:</strong> <span id="error-message"></span>
-                </div>
-                <div id="iframe-container" style="position: relative; background: #f5f5f5; padding: 10px; border-radius: 8px;">
-                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>Power BI Dashboard</strong>
-                            <div class="mt-1">
-                                <small class="text-muted">The dashboard should load automatically below.</small>
-                            </div>
-                        </div>
-                        <div>
-                            <button onclick="document.getElementById('powerbi-iframe').src = document.getElementById('powerbi-iframe').src" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-arrow-clockwise"></i> Reload Iframe
-                            </button>
-                        </div>
-                    </div>
-                    <div id="auth-message" style="display: none; padding: 15px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px; margin-bottom: 10px;">
-                        <strong><i class="bi bi-exclamation-triangle"></i> Dashboard Not Loading?</strong> 
-                        <p class="mb-2 mt-2">If the dashboard below is blank, try:</p>
-                        <div class="mt-2">
-                            <button onclick="document.getElementById('powerbi-iframe').src = document.getElementById('powerbi-iframe').src" class="btn btn-sm btn-primary">
-                                <i class="bi bi-arrow-clockwise"></i> Reload Iframe
-                            </button>
-                            <button onclick="location.reload()" class="btn btn-sm btn-secondary ms-2">
-                                <i class="bi bi-arrow-clockwise"></i> Refresh Page
-                            </button>
-                            {% if tenant_id %}
-                            <a href="https://app.powerbi.com/?ctid={{ tenant_id }}" target="_blank" class="btn btn-sm btn-warning ms-2">
-                                <i class="bi bi-box-arrow-up-right"></i> Open Power BI
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <iframe 
-                        title="Dashboard_final"
-                        width="100%"
-                        height="600"
-                        src="{{ powerbi_url }}"
-                        frameborder="0"
-                        allowFullScreen="true"
-                        id="powerbi-iframe"
-                        class="powerbi-iframe"
-                        style="display: block; visibility: visible; min-height: 600px; width: 100%; border: 2px solid #007bff; background: white;">
-                    </iframe>
-                    <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 4px; font-size: 12px; color: #666;">
-                        <strong>Note:</strong> The dashboard should load automatically. If it's blank, use the "Reload Iframe" button above or check the browser console (F12) for errors.
-                    </div>
-                </div>
-                </div>
-                <noscript>
-                    <div class="alert alert-warning" role="alert">
-                        <i class="bi bi-exclamation-triangle"></i> JavaScript is required to display the Power BI dashboard.
-                    </div>
-                </noscript>
+                <script>
+                    // Redirect immediately to PowerBI in the same tab
+                    window.location.href = '{{ powerbi_url }}';
+                </script>
             {% else %}
                 <div class="alert alert-info" role="alert">
                     <h4 class="alert-heading"><i class="bi bi-info-circle"></i> Power BI URL Not Configured</h4>
@@ -141,132 +55,14 @@
                         <strong>How to get your Power BI embed URL:</strong><br>
                         1. Open your Power BI report in Power BI Service<br>
                         2. Click "File" → "Embed report" → "Website or portal"<br>
-                        3. Copy the embed URL and paste it in your settings
+                        3. Copy the embed URL and paste it in your settings<br>
+                        <br>
+                        <strong>Note:</strong> The URL should look like:<br>
+                        <code>https://app.powerbi.com/reportEmbed?reportId=YOUR_REPORT_ID&autoAuth=true&ctid=YOUR_TENANT_ID</code>
                     </p>
                 </div>
             {% endif %}
         </div>
-        </div>
     </div>
-{% endblock %}
-
-{% block extra_scripts %}
-    {% if powerbi_url and 'YOUR_EMBED_URL_HERE' not in powerbi_url %}
-    <script>
-        (function() {
-            const loadingEl = document.getElementById('powerbi-loading');
-            const iframeEl = document.getElementById('powerbi-iframe');
-            const errorEl = document.getElementById('powerbi-error');
-            const errorMsgEl = document.getElementById('error-message');
-            const authMessage = document.getElementById('auth-message');
-            
-            // Log initial state
-            console.log('Power BI URL:', '{{ powerbi_url }}');
-            console.log('Iframe element:', iframeEl);
-            console.log('Iframe src:', iframeEl.src);
-            
-            // Ensure iframe is visible
-            iframeEl.style.display = 'block';
-            iframeEl.style.visibility = 'visible';
-            
-            // Handle successful load
-            iframeEl.addEventListener('load', function() {
-                console.log('Iframe load event fired');
-                // Wait a bit before hiding loading to ensure content is ready
-                setTimeout(function() {
-                    loadingEl.style.display = 'none';
-                    errorEl.style.display = 'none';
-                    console.log('Loading indicator hidden - dashboard should be visible');
-                }, 3000);
-            });
-            
-            // Check if iframe is stuck after timeout - show auth message
-            setTimeout(function() {
-                if (loadingEl && loadingEl.style.display !== 'none') {
-                    console.log('Still showing loading after 10 seconds - might need authentication');
-                    loadingEl.style.display = 'none';
-                    // Show auth message if iframe seems stuck
-                    if (authMessage) {
-                        authMessage.style.display = 'block';
-                    }
-                }
-            }, 10000);
-            
-            // Also show auth message after 15 seconds if still loading
-            setTimeout(function() {
-                if (authMessage) {
-                    authMessage.style.display = 'block';
-                    console.log('Showing authentication message - dashboard may need sign-in');
-                }
-            }, 15000);
-            
-            // Handle load errors
-            iframeEl.addEventListener('error', function() {
-                console.log('Iframe error event fired');
-                loadingEl.style.display = 'none';
-                errorEl.style.display = 'block';
-                errorMsgEl.textContent = 'Failed to load the iframe. Please use the "Open in New Tab" button above.';
-            });
-            
-            // Listen for messages from Power BI iframe (for authentication status)
-            window.addEventListener('message', function(event) {
-                // Power BI sends messages about authentication status
-                if (event.origin && event.origin.includes('powerbi.com')) {
-                    console.log('Power BI message received:', event.data);
-                    // Hide loading if we get a message from Power BI
-                    if (loadingEl && loadingEl.style.display !== 'none') {
-                        setTimeout(function() {
-                            loadingEl.style.display = 'none';
-                            if (authMessage) authMessage.style.display = 'none';
-                        }, 1000);
-                    }
-                }
-            });
-            
-            // Monitor iframe for auth redirects - show auth message if stuck
-            let checkCount = 0;
-            const authCheckInterval = setInterval(function() {
-                checkCount++;
-                try {
-                    const iframeUrl = iframeEl.contentWindow.location.href;
-                    if (iframeUrl && (iframeUrl.includes('autoAuthLogin') || iframeUrl.includes('login') || iframeUrl.includes('signin'))) {
-                        console.log('Detected authentication page in iframe');
-                        if (authMessage) {
-                            authMessage.style.display = 'block';
-                            loadingEl.style.display = 'none';
-                        }
-                        clearInterval(authCheckInterval);
-                    }
-                } catch (e) {
-                    // Cross-origin - can't check URL directly
-                    // After several checks, assume auth might be needed
-                    if (checkCount >= 5 && authMessage) {
-                        authMessage.style.display = 'block';
-                        loadingEl.style.display = 'none';
-                        clearInterval(authCheckInterval);
-                    }
-                }
-            }, 3000);
-            
-            // Timeout fallback - if iframe doesn't load in 15 seconds, just hide loading
-            // Don't show overlay automatically - let iframe be visible
-            setTimeout(function() {
-                if (loadingEl && loadingEl.style.display !== 'none') {
-                    loadingEl.style.display = 'none';
-                    console.log('Loading timeout - hiding loading, iframe should be visible');
-                }
-            }, 15000);
-            
-            // Don't automatically show overlay - let user interact with iframe
-            // Overlay can be manually triggered if needed via the button at top
-            
-            // Log URL for debugging
-            console.log('Power BI Embed URL:', '{{ powerbi_url }}');
-            {% if report_id %}
-            console.log('Report ID:', '{{ report_id }}');
-            {% endif %}
-        })();
-    </script>
-    {% endif %}
 {% endblock %}
 
